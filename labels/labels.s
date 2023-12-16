@@ -67,6 +67,8 @@ vram_buffer_index				= $23
 
 rng_data						= $24 ; 4 bytes, $24-$27
 
+
+
 palette_1						= $100 ; 32 bytes, $100-$11f
 palette_2						= $120 ; 32 bytes, $120-$13f
 
