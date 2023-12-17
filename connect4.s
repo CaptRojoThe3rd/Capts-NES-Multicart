@@ -3,20 +3,23 @@
 
 	; Global vars are $00-$2f
 
-	game_location			= $30
-	game_type				= $31
-	current_turn			= $32
+	game_location				= $30
+	game_type					= $31
+	current_turn				= $32
 
-	piece_column_selection	= $33
-	piece_animating			= $34
-	piece_animation_frame	= $35
-	piece_horz_animation	= $36
+	piece_column_selection		= $33
+	piece_vert_animation		= $34
+	piece_horz_animation		= $35
 
-	board_main				= $300 ; 42 bytes, $300-$329
-	board_computer_layer_0	= $32a ; 42 bytes, $32a-$353
-	board_player_layer_0	= $354 ; 42 bytes, $354-$37d
-	board_computer_layer_1	= $37e ; 42 bytes, $37e-$3a7
-	board_player_layer_1	= $3a8 ; 42 bytes, $3a8-$3d1
+	piece_animation_x			= $36
+	piece_animation_target_y	= $37
+	piece_animation_target_slot	= $38
+
+	board_main					= $300 ; 42 bytes, $300-$329
+	board_computer_layer_0		= $32a ; 42 bytes, $32a-$353
+	board_player_layer_0		= $354 ; 42 bytes, $354-$37d
+	board_computer_layer_1		= $37e ; 42 bytes, $37e-$3a7
+	board_player_layer_1		= $3a8 ; 42 bytes, $3a8-$3d1
 
 	
 
@@ -163,9 +166,55 @@
 			jsr CopySpriteToBuffer
 		ELSE
 			; Draw piece above board if animation is not being played
-			lda piece_animating
+			lda piece_vert_animation
 			IF EQ
 				jsr RenderPieceAboveBoard
+			ELSE
+				inc piece_vert_animation
+				cmp piece_animation_target_y
+				IF EQ
+					lda #0
+					sta piece_vert_animation
+				END_IF
+				lda #0
+				sta controller_1_new
+				sta controller_2_new
+				; Draw piece falling
+				; Move sprites to lower priorty positions
+				lda #$80
+				sta oam_buffer_index
+				jsr RenderPieceAboveBoard
+				lda piece_vert_animation
+				sta oam_buffer
+				sta oam_buffer+12
+				add #8
+				sta oam_buffer+4
+				sta oam_buffer+8
+				; Cover falling piece with board
+				lda #0
+				sta oam_buffer_index
+				; Y
+				lda #64
+				sta oam_buffer_buffer
+				; ID
+				lda #$04
+				sta oam_buffer_buffer+1
+				; Attributes
+				lda #$03
+				sta oam_buffer_buffer+2
+				; X
+				lda piece_animation_x
+				sta oam_buffer_buffer+3
+				ldy #0
+				DO
+					jsr CopySpriteToBuffer
+					lda oam_buffer_buffer
+					add #16
+					sta oam_buffer_buffer
+				FOR Y, NE, #6, iny
+				; Return OAM buffer index to normal
+				lda #$90
+				sta oam_buffer_index
 			END_IF
 
 			; Animations
@@ -229,6 +278,28 @@
 						jsr GetRowToDropPiece
 						lda #1
 						sta board_main,y
+						; Begin animation
+						sty piece_animation_target_slot
+						tya
+						and #$07
+						IF A, GE, #7
+							lda #0
+						END_IF
+						asl
+						asl
+						asl
+						asl
+						adc #48
+						sta piece_animation_target_y
+						lda #46
+						sta piece_vert_animation
+						lda piece_column_selection
+						asl
+						asl
+						asl
+						asl
+						adc #72
+						sta piece_animation_x
 					END_IF
 				END_IF
 
@@ -264,7 +335,7 @@
 		lda #46
 		sta oam_buffer_buffer
 		; Attributes
-		lda #$20
+		lda #$00
 		ora current_turn
 		sta oam_buffer_buffer+2
 		; ID
@@ -279,7 +350,7 @@
 		lda #54
 		sta oam_buffer_buffer
 		; Attributes
-		lda #$a0
+		lda #$80
 		ora current_turn
 		sta oam_buffer_buffer+2
 		jsr CopySpriteToBuffer
@@ -290,7 +361,7 @@
 		add #8
 		sta oam_buffer_buffer+3
 		; Attributes
-		lda #$e0
+		lda #$c0
 		ora current_turn
 		sta oam_buffer_buffer+2
 		jsr CopySpriteToBuffer
@@ -300,7 +371,7 @@
 		lda #46
 		sta oam_buffer_buffer
 		; Attributes
-		lda #$60
+		lda #$40
 		ora current_turn
 		sta oam_buffer_buffer+2
 		jsr CopySpriteToBuffer
@@ -316,14 +387,25 @@
 		ldx #0
 
 		DO
+			; Get what is in the slot
 			lda (temp+2),y
+
+			; If piece is there, return
 			bne :+
+
+			; Increment row counter (add 7 to slot counter)
 			tya
 			add #7
 			tay
 		FOR X, NE, #5, inx
-
 		:
+		; If all 6 rows are checked, exit loop and return bottom slot index
+
+		; If X is zero, the column is full. Return $ff.
+		cpx #0
+		IF EQ
+			dex
+		END_IF
 
 		rts
 	.endproc
