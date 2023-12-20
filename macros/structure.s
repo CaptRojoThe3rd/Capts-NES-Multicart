@@ -360,8 +360,6 @@ __casedefined__ .set 0
 		.exitmacro
 	.endif
 
-	.fatal "Invalid inc/dec operation"
-
 .endmacro
 
 
@@ -407,7 +405,7 @@ __casedefined__ .set 0
 	.if (.xmatch (arg2, EQ))
 
 		_for_helper arg1, arg2, arg3, arg4, arg5
-		beq .ident(.sprintf("__do_loop__%d", ::__depth__))
+		jeq .ident(.sprintf("__do_loop__%d", ::__depth__))
 		.endscope
 		::__depth__ .set ::__depth__ - 1
 
@@ -415,7 +413,7 @@ __casedefined__ .set 0
 	.elseif (.xmatch (arg2, NE))
 
 		_for_helper arg1, arg2, arg3, arg4, arg5
-		bne .ident(.sprintf("__do_loop__%d", ::__depth__))
+		jne .ident(.sprintf("__do_loop__%d", ::__depth__))
 		.endscope
 		::__depth__ .set ::__depth__ - 1
 
@@ -423,7 +421,7 @@ __casedefined__ .set 0
 	.elseif (.xmatch (arg2, CC))
 
 		_for_helper arg1, arg2, arg3, arg4, arg5
-		bcc .ident(.sprintf("__do_loop__%d", ::__depth__))
+		jcc .ident(.sprintf("__do_loop__%d", ::__depth__))
 		.endscope
 		::__depth__ .set ::__depth__ - 1
 
@@ -431,7 +429,7 @@ __casedefined__ .set 0
 	.elseif (.xmatch (arg2, CS))
 
 		_for_helper arg1, arg2, arg3, arg4, arg5
-		bcs .ident(.sprintf("__do_loop__%d", ::__depth__))
+		jcs .ident(.sprintf("__do_loop__%d", ::__depth__))
 		.endscope
 		::__depth__ .set ::__depth__ - 1
 
@@ -439,7 +437,7 @@ __casedefined__ .set 0
 	.elseif (.xmatch (arg2, VC))
 
 		_for_helper arg1, arg2, arg3, arg4, arg5
-		bvc .ident(.sprintf("__do_loop__%d", ::__depth__))
+		jvc .ident(.sprintf("__do_loop__%d", ::__depth__))
 		.endscope
 		::__depth__ .set ::__depth__ - 1
 
@@ -447,7 +445,7 @@ __casedefined__ .set 0
 	.elseif (.xmatch (arg2, VS))
 
 		_for_helper arg1, arg2, arg3, arg4, arg5
-		bvs .ident(.sprintf("__do_loop__%d", ::__depth__))
+		jvs .ident(.sprintf("__do_loop__%d", ::__depth__))
 		.endscope
 		::__depth__ .set ::__depth__ - 1
 
@@ -455,7 +453,7 @@ __casedefined__ .set 0
 	.elseif (.xmatch (arg2, MI))
 
 		_for_helper arg1, arg2, arg3, arg4, arg5
-		bmi .ident(.sprintf("__do_loop__%d", ::__depth__))
+		jmi .ident(.sprintf("__do_loop__%d", ::__depth__))
 		.endscope
 		::__depth__ .set ::__depth__ - 1
 
@@ -463,7 +461,7 @@ __casedefined__ .set 0
 	.elseif (.xmatch (arg2, PL))
 
 		_for_helper arg1, arg2, arg3, arg4, arg5
-		bpl .ident(.sprintf("__do_loop__%d", ::__depth__))
+		jpl .ident(.sprintf("__do_loop__%d", ::__depth__))
 		.endscope
 		::__depth__ .set ::__depth__ - 1
 
@@ -472,7 +470,7 @@ __casedefined__ .set 0
 
 		_for_helper arg1, arg2, arg3, arg4, arg5
 		beq .ident(.sprintf("__do_loop__%d", ::__depth__))
-		bcc .ident(.sprintf("__do_loop__%d", ::__depth__))
+		jcc .ident(.sprintf("__do_loop__%d", ::__depth__))
 		.endscope
 		::__depth__ .set ::__depth__ - 1
 
@@ -481,7 +479,7 @@ __casedefined__ .set 0
 
 		_for_helper arg1, arg2, arg3, arg4, arg5
 		beq :+
-		bcs .ident(.sprintf("__do_loop__%d", ::__depth__))
+		jcs .ident(.sprintf("__do_loop__%d", ::__depth__))
 		:
 		.endscope
 		::__depth__ .set ::__depth__ - 1

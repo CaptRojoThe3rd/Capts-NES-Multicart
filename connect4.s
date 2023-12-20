@@ -16,12 +16,22 @@
 	piece_animation_target_slot	= $38
 
 	switching_turn				= $39
+	winning_player				= $3a
+
+	winning_temp_a				= $3b
+	winning_temp_x				= $3c
+	winning_temp_y				= $3d
+
+	winning_temp_tick			= $3e
+	winning_temp_frame			= $3f
+	winning_temp_direction		= $40
 
 	board_main					= $300 ; 42 bytes, $300-$329
 	board_computer_layer_0		= $32a ; 42 bytes, $32a-$353
 	board_player_layer_0		= $354 ; 42 bytes, $354-$37d
 	board_computer_layer_1		= $37e ; 42 bytes, $37e-$3a7
 	board_player_layer_1		= $3a8 ; 42 bytes, $3a8-$3d1
+	board_temp					= $3d2 ; 42 bytes, $3d2-$3fb
 
 	
 
@@ -178,7 +188,53 @@
 					eor #$01
 					sta current_turn
 				END_IF
-				jsr RenderPieceAboveBoard
+				
+				lda winning_player
+				IF EQ
+					jsr RenderPieceAboveBoard
+				ELSE
+					inc winning_temp_frame
+					lda winning_temp_frame
+					cmp #5
+					IF EQ
+						lda #0
+						sta winning_temp_frame
+
+						lda winning_temp_direction
+						IF EQ
+							inc winning_temp_tick
+							lda winning_temp_tick
+							IF A, EQ, #5
+								lda #1
+								eor winning_temp_direction
+								sta winning_temp_direction
+							END_IF
+						ELSE
+							dec winning_temp_tick
+							IF EQ
+								lda #1
+								eor winning_temp_direction
+								sta winning_temp_direction
+							END_IF
+						END_IF
+					END_IF
+					
+					; Draw winning highlight sprites
+					; Y
+					lda winning_temp_y
+					sta oam_buffer_buffer
+					; ID
+					lda winning_temp_tick
+					add #3
+					sta oam_buffer_buffer+1
+					; Attributes
+					lda #$02
+					sta oam_buffer_buffer+2
+					; X
+					lda winning_temp_x
+					sta oam_buffer_buffer+3
+					jsr CopySpriteToBuffer
+				END_IF
 			ELSE
 				inc piece_vert_animation
 				lda piece_vert_animation
@@ -633,6 +689,35 @@
 				adc #72
 				sta piece_animation_x
 
+				lda #<board_main
+				sta temp+4
+				lda #>board_main
+				sta temp+5
+				ldx current_turn
+				inx
+				stx temp+6
+				jsr CheckForWin
+				IF EQ
+					ldx current_turn
+					inx
+					stx winning_player
+
+					lda winning_temp_x
+					asl
+					asl
+					asl
+					asl
+					adc #72
+					sta winning_temp_x
+					lda winning_temp_y
+					asl
+					asl
+					asl
+					asl
+					adc #64
+					sta winning_temp_y
+				END_IF
+
 				; Switch turn
 				inc switching_turn
 			END_IF
@@ -645,101 +730,495 @@
 	.proc CheckForWin
 		; Addr is stored in temp+4 and 5
 		; Player is stored in temp+6
+		; Win status is in temp+7
+		; Win detection temp is in temp+8
 
-		sta temp+6
+
+		ldy #41
+		DO
+			lda (temp+4),y
+			sta board_temp,y
+		FOR Y, PL, #$ff, dey
 
 		; -
+		ldx #0
+		stx winning_temp_a
+		stx winning_temp_x
+		stx winning_temp_y
 		ldy #0
 		DO
-			ldx #0
-			DO
-				lda (temp+4),y
-				stx temp+8,x
-			FOR X, NE, #7, inx
-			jsr Check7ForWin
+			; (0, y) - (3, y)
+			lda #0
+			sta temp+8
+			lda board_temp,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+1,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+2,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+3,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda temp+8
+			cmp #4
 			IF EQ
 				rts
 			END_IF
+
+			inc winning_temp_x ; 1
+
+			; (1, y) - (4, y)
+			lda #0
+			sta temp+8
+			lda board_temp+1,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+2,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+3,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+4,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda temp+8
+			cmp #4
+			IF EQ
+				rts
+			END_IF
+
+			inc winning_temp_x ; 2
+
+			; (2, y) - (5, y)
+			lda #0
+			sta temp+8
+			lda board_temp+2,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+3,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+4,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+5,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda temp+8
+			cmp #4
+			IF EQ
+				rts
+			END_IF
+
+			inc winning_temp_x ; 3
+
+			; (3, y) - (6, y)
+			lda #0
+			sta temp+8
+			lda board_temp+3,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+4,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+5,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+6,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda temp+8
+			cmp #4
+			IF EQ
+				rts
+			END_IF
+
+			lda #0
+			sta winning_temp_x
+			inc winning_temp_y
+
+			inx2
+			inx2
+			inx2
+			inx
 		FOR Y, NE, #6, iny
 
 		; |
+		lda #1
+		sta winning_temp_a
+		ldx #0
+		stx winning_temp_x
+		stx winning_temp_y
+		ldy #0
+		DO
+			; (x, 0) - (x, 3)
+			lda #0
+			sta temp+8
+			lda board_temp,y
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+7,y
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+14,y
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+21,y
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda temp+8
+			IF A, EQ, #4
+				rts
+			END_IF
 
+			inc winning_temp_y ; 1
+
+			; (x, 1) - (x, 4)
+			lda #0
+			sta temp+8
+			lda board_temp+7,y
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+14,y
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+21,y
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+28,y
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda temp+8
+			IF A, EQ, #4
+				rts
+			END_IF
+
+			inc winning_temp_y ; 2
+
+			; (x, 2) - (x, 5)
+			lda #0
+			sta temp+8
+			lda board_temp+14,y
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+21,y
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+28,y
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+35,y
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda temp+8
+			IF A, EQ, #4
+				rts
+			END_IF
+
+			lda #0
+			sta winning_temp_y
+			inc winning_temp_x
+			
+			iny
+		FOR X, NE, #7, inx
+
+		; \
+		lda #2
+		sta winning_temp_a
+		ldx #0
+		stx winning_temp_x
+		stx winning_temp_y
+		ldy #0
+		DO
+			; (0+x, 0); (1+x, 1); (2+x, 2); (3+x, 3)
+			lda #0
+			sta temp+8
+			lda board_temp+0,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+7+1,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+14+2,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+21+3,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda temp+8
+			IF A, EQ, #4
+				rts
+			END_IF
+
+			inc winning_temp_y ; 1
+
+			; (0+x, 1); (1+x, 2); (2+x, 3); (3+x, 4)
+			lda #0
+			sta temp+8
+			lda board_temp+7,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+14+1,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+21+2,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+28+3,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda temp+8
+			IF A, EQ, #4
+				rts
+			END_IF
+
+			inc winning_temp_y ; 2
+
+			; (0+x, 2); (1+x, 3); (2+x, 4); (3+x, 5)
+			lda #0
+			sta temp+8
+			lda board_temp+14,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+21+1,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+28+2,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+35+3,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda temp+8
+			IF A, EQ, #4
+				rts
+			END_IF
+
+			lda #0
+			sta winning_temp_y
+			inc winning_temp_x
+
+			inx
+		FOR Y, NE, #4, iny
+
+		; /
+		lda #3
+		sta winning_temp_a
+		ldx #0
+		stx winning_temp_x
+		stx winning_temp_y
+		ldy #0
+		DO
+			; (3+x, 0); (2+x, 1); (1+x, 2); (0+x, 3)
+			lda #0
+			sta temp+8
+			lda board_temp+21,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+14+1,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+7+2,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+3,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda temp+8
+			IF A, EQ, #4
+				rts
+			END_IF
+
+			inc winning_temp_y ; 1
+
+			; (3+x, 1); (2+x, 2); (1+x, 3); (0+x, 4)
+			lda #0
+			sta temp+8
+			lda board_temp+28,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+21+1,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+14+2,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+7+3,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda temp+8
+			IF A, EQ, #4
+				rts
+			END_IF
+
+			inc winning_temp_y ; 2
+
+			; (3+x, 2); (2+x, 3); (1+x, 4); (0+x, 5)
+			lda #0
+			sta temp+8
+			lda board_temp+35,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+28+1,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+21+2,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda board_temp+14+3,x
+			cmp temp+6
+			IF EQ
+				inc temp+8
+			END_IF
+			lda temp+8
+			IF A, EQ, #4
+				rts
+			END_IF
+
+			lda #0
+			sta winning_temp_y
+			inc winning_temp_x
+
+			inx
+		FOR Y, NE, #4, iny
 
 		lda #$ff
 		rts
 	.endproc
 
 
-	.proc Check7ForWin
-		lda temp+8
-		cmp temp+6
-		bne :+
-		lda temp+9
-		cmp temp+6
-		bne :+
-		lda temp+10
-		cmp temp+6
-		bne :+
-		lda temp+11
-		cmp temp+6
-		bne :+
-		rts
-		:
+	.proc AddToBaseWinPos
+		SWITCH winning_temp_a
+			CASE 0
+				lda oam_buffer_buffer+3
+				add #16
+				sta oam_buffer_buffer+3
+			CASE 1
+				lda oam_buffer_buffer
+				add #16
+				sta oam_buffer_buffer
+			CASE 2
+				lda oam_buffer_buffer+3
+				add #16
+				sta oam_buffer_buffer+3
+				lda oam_buffer_buffer
+				add #16
+				sta oam_buffer_buffer
+			CASE 3
+				lda oam_buffer_buffer+3
+				add #16
+				sta oam_buffer_buffer+3
+				lda oam_buffer_buffer
+				sub #16
+				sta oam_buffer_buffer
+		END_SWITCH
 
-		lda temp+9
-		cmp temp+6
-		bne :+
-		lda temp+10
-		cmp temp+6
-		bne :+
-		lda temp+11
-		cmp temp+6
-		bne :+
-		lda temp+12
-		cmp temp+6
-		bne :+
-		rts
-		:
-
-		lda temp+10
-		cmp temp+6
-		bne :+
-		lda temp+11
-		cmp temp+6
-		bne :+
-		lda temp+12
-		cmp temp+6
-		bne :+
-		lda temp+13
-		cmp temp+6
-		bne :+
-		rts
-		:
-
-		lda temp+11
-		cmp temp+6
-		bne :+
-		lda temp+12
-		cmp temp+6
-		bne :+
-		lda temp+13
-		cmp temp+6
-		bne :+
-		lda temp+14
-		cmp temp+6
-		bne :+
-		rts
-		:
-
-		lda #$ff
-		rts
-	.endproc
-
-
-	.proc Check6ForWin
-		
-
-		lda #$ff
 		rts
 	.endproc
 
