@@ -220,6 +220,8 @@
 					END_IF
 					
 					; Draw winning highlight sprites
+					; Top Left
+					; Piece 1
 					; Y
 					lda winning_temp_y
 					sta oam_buffer_buffer
@@ -233,6 +235,15 @@
 					; X
 					lda winning_temp_x
 					sta oam_buffer_buffer+3
+					jsr CopySpriteToBuffer
+					; Piece 2
+					jsr AddToBaseWinPos
+					jsr CopySpriteToBuffer
+					; Piece 3
+					jsr AddToBaseWinPos
+					jsr CopySpriteToBuffer
+					; Piece 4
+					jsr AddToBaseWinPos
 					jsr CopySpriteToBuffer
 				END_IF
 			ELSE
@@ -1195,27 +1206,56 @@
 
 	.proc AddToBaseWinPos
 		SWITCH winning_temp_a
-			CASE 0
+			CASE #0
 				lda oam_buffer_buffer+3
 				add #16
 				sta oam_buffer_buffer+3
-			CASE 1
+			CASE #1
 				lda oam_buffer_buffer
 				add #16
 				sta oam_buffer_buffer
-			CASE 2
+			CASE #2
 				lda oam_buffer_buffer+3
 				add #16
 				sta oam_buffer_buffer+3
 				lda oam_buffer_buffer
 				add #16
 				sta oam_buffer_buffer
-			CASE 3
+			CASE #3
 				lda oam_buffer_buffer+3
 				add #16
 				sta oam_buffer_buffer+3
 				lda oam_buffer_buffer
 				sub #16
+				sta oam_buffer_buffer
+		END_SWITCH
+
+		rts
+	.endproc
+
+	.proc SubToBaseWinPos
+		SWITCH winning_temp_a
+			CASE #0
+				lda oam_buffer_buffer+3
+				sub #64
+				sta oam_buffer_buffer+3
+			CASE #1
+				lda oam_buffer_buffer
+				sub #64
+				sta oam_buffer_buffer
+			CASE #2
+				lda oam_buffer_buffer+3
+				sub #64
+				sta oam_buffer_buffer+3
+				lda oam_buffer_buffer
+				sub #64
+				sta oam_buffer_buffer
+			CASE #3
+				lda oam_buffer_buffer+3
+				sub #64
+				sta oam_buffer_buffer+3
+				lda oam_buffer_buffer
+				add #64
 				sta oam_buffer_buffer
 		END_SWITCH
 
